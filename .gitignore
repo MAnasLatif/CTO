@@ -1,0 +1,25 @@
+# Local Agent Skills installation and dependency lock
+.agents/
+skills-lock.json
+
+# Third-party sub-skills are downloaded locally from their upstream sources.
+skills/cto/subskills/
+skills/cto/references/sync-report.json
+skills/cto/references/audit-report.json
+skills/cto/THIRD_PARTY_NOTICES.md
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node.js
+node_modules/
+
+# Local configuration and operating-system files
+.env
+.env.*
+!.env.example
+.DS_Store
