@@ -1,0 +1,262 @@
+{
+  "schema_version": 1,
+  "recoveries": [
+    {
+      "owner": "refoundai",
+      "repository": "lenny-skills",
+      "source": "https://github.com/refoundai/lenny-skills",
+      "revision": "280a57aa42fed3b6f35f51f0d9e71013b4c8ae74",
+      "path_template": "skills/{skill}",
+      "reason": "Removed by the Lenny Skills DB 2.0 catalog rebuild in commit 0db1f499b5f7c5e9d53f7a457dc83dd415ca77c4.",
+      "skills": [
+        "behavioral-product-design",
+        "building-team-culture",
+        "conducting-interviews",
+        "conducting-user-interviews",
+        "cross-functional-collaboration",
+        "delegating-work",
+        "designing-surveys",
+        "engineering-culture",
+        "evaluating-candidates",
+        "evaluating-new-technology",
+        "giving-presentations",
+        "having-difficult-conversations",
+        "managing-tech-debt",
+        "managing-timelines",
+        "measuring-product-market-fit",
+        "onboarding-new-hires",
+        "organizational-design",
+        "organizational-transformation",
+        "planning-under-uncertainty",
+        "platform-strategy",
+        "post-mortems-retrospectives",
+        "prioritizing-roadmap",
+        "product-operations",
+        "running-effective-1-1s",
+        "running-effective-meetings",
+        "scoping-cutting",
+        "setting-okrs-goals",
+        "shipping-products",
+        "team-rituals",
+        "technical-roadmaps",
+        "writing-job-descriptions",
+        "writing-north-star-metrics"
+      ]
+    },
+    {
+      "owner": "anthropics",
+      "repository": "knowledge-work-plugins",
+      "source": "https://github.com/anthropics/knowledge-work-plugins",
+      "revision": "1316b6508366108158cf08503363d4b4cbc699e5",
+      "path_template": "product-management/skills/{skill}",
+      "reason": "Removed from the catalog by commit 2d6f7e22dd25593f0f748010430ef86f19659735.",
+      "skills": [
+        "feature-spec",
+        "stakeholder-comms",
+        "user-research-synthesis"
+      ]
+    },
+    {
+      "owner": "anthropics",
+      "repository": "knowledge-work-plugins",
+      "source": "https://github.com/anthropics/knowledge-work-plugins",
+      "revision": "1316b6508366108158cf08503363d4b4cbc699e5",
+      "path_template": "marketing/skills/{skill}",
+      "reason": "Removed from the catalog by commit 2d6f7e22dd25593f0f748010430ef86f19659735.",
+      "skills": [
+        "competitive-analysis"
+      ]
+    },
+    {
+      "owner": "anthropics",
+      "repository": "knowledge-work-plugins",
+      "source": "https://github.com/anthropics/knowledge-work-plugins",
+      "revision": "1316b6508366108158cf08503363d4b4cbc699e5",
+      "path_template": "customer-support/skills/{skill}",
+      "reason": "Removed from the catalog by commit 2d6f7e22dd25593f0f748010430ef86f19659735.",
+      "skills": [
+        "knowledge-management"
+      ]
+    },
+    {
+      "owner": "coreyhaines31",
+      "repository": "marketingskills",
+      "source": "https://github.com/coreyhaines31/marketingskills",
+      "revision": "f3990f7f99ae63b9e26eaa61114f60e0408742ff",
+      "path_template": "skills/{skill}",
+      "reason": "Renamed in commit 30f9b9a729bbbe3da562fc1108c31f3a35afcca1.",
+      "skills": [
+        "ab-test-setup",
+        "pricing-strategy"
+      ]
+    },
+    {
+      "owner": "cosmix",
+      "repository": "loom",
+      "source": "https://github.com/cosmix/loom",
+      "revision": "eb53538e717e59296d50881ef3a7cc30f74e8619",
+      "path_template": "skills/{skill}",
+      "reason": "Renamed in commit 24934a8dea434d54bb3524695bd14bc0747980b0.",
+      "skills": [
+        "event-driven"
+      ]
+    },
+    {
+      "owner": "google",
+      "repository": "skills",
+      "source": "https://github.com/google/skills",
+      "revision": "48378f5e7311f02d3c37fdf39563013bb688a4d4",
+      "path_template": "skills/cloud/{skill}",
+      "reason": "Removed from the catalog by commit 6aa329d9cd7b63d48826307219a8b993fb3d4ddb.",
+      "skills": [
+        "gke-security"
+      ]
+    },
+    {
+      "owner": "openai",
+      "repository": "skills",
+      "source": "https://github.com/openai/skills",
+      "revision": "45d05d75363abf13f99d09e899d61e07b8010685",
+      "path_template": "skills/.curated/{skill}",
+      "reason": "Removed from the catalog by commit 228962adea8205e27e5381ff07929623be83ccb2.",
+      "skills": [
+        "doc"
+      ]
+    },
+    {
+      "owner": "redis",
+      "repository": "agent-skills",
+      "source": "https://github.com/redis/agent-skills",
+      "revision": "d20b723079971eed9293297b334809084017cf04",
+      "path_template": "skills/{skill}",
+      "reason": "Replaced by more focused Redis skills in commit 18da4e42371f7eee0dcfafd8461effd41de351e9.",
+      "skills": [
+        "redis-development"
+      ]
+    },
+    {
+      "owner": "teachingai",
+      "repository": "full-stack-skills",
+      "source": "https://github.com/teachingai/full-stack-skills",
+      "revision": "31ba16077ced37adebf7ed57c3f1e0a2e1fcaf0e",
+      "path_template": "skills/{skill}",
+      "reason": "Removed from the default branch by commit ca261e7e2c562b1d17525a091b22d8857b9f368a.",
+      "skills": [
+        "ddd-microservices"
+      ]
+    },
+    {
+      "owner": "shubhamsaboo",
+      "repository": "awesome-llm-apps",
+      "source": "https://github.com/shubhamsaboo/awesome-llm-apps",
+      "revision": "b260c8e84e36a1a9de7d2f6c0c21753445ba0ea8",
+      "path_template": "agent_skills/planning/project_planner.md",
+      "kind": "legacy",
+      "legacy_markdown": true,
+      "frontmatter_description": "Break down complex projects into actionable plans with dependencies, risks, effort estimates, milestones, owners, and realistic timelines. Use when planning initiatives, launches, or multi-phase delivery.",
+      "reason": "The catalog entry points to a legacy Markdown agent skill introduced in this commit rather than a standard SKILL.md directory; recovery prepends only the required Agent Skills frontmatter.",
+      "skills": [
+        "project-planner"
+      ]
+    },
+    {
+      "owner": "anton-abyzov",
+      "repository": "specweave",
+      "source": "https://github.com/anton-abyzov/specweave",
+      "archive_owner": "majiayu000",
+      "archive_repository": "claude-skill-registry",
+      "revision": "74d361041705b91a8a1ce9602811b45cf455954e",
+      "path_template": "skills/devops/release-strategy-advisor-anton-abyzov-specweave",
+      "upstream_skill_path_template": "plugins/specweave-release/skills/{skill}/SKILL.md",
+      "kind": "mirror",
+      "skill_file_only": true,
+      "reason": "Removed from current SpecWeave; recovered from a source-qualified registry snapshot whose metadata identifies the original path and MIT license.",
+      "skills": [
+        "release-strategy-advisor"
+      ]
+    },
+    {
+      "owner": "microsoft",
+      "repository": "agent-skills",
+      "source": "https://github.com/microsoft/agent-skills",
+      "archive_owner": "majiayu000",
+      "archive_repository": "claude-skill-registry",
+      "revision": "74d361041705b91a8a1ce9602811b45cf455954e",
+      "path_template": "skills/data/azd-deployment-microsoft-agent-skills",
+      "upstream_skill_path_template": ".github/skills/{skill}/SKILL.md",
+      "kind": "mirror",
+      "skill_file_only": true,
+      "reason": "The original repository is unavailable; recovered from a source-qualified registry snapshot whose metadata identifies Microsoft, the original path, and MIT licensing.",
+      "skills": [
+        "azd-deployment"
+      ]
+    },
+    {
+      "owner": "404kidwiz",
+      "repository": "claude-supercode-skills",
+      "source": "https://github.com/404kidwiz/claude-supercode-skills",
+      "archive_owner": "belokonm",
+      "archive_repository": "claude-supercode-skills",
+      "revision": "bd3a30550bbb622ecceaea6b2bbc43c8f345ea52",
+      "path_template": "{skill}-skill",
+      "upstream_skill_path_template": "{skill}-skill/SKILL.md",
+      "kind": "mirror",
+      "skill_file_only": true,
+      "reason": "The original repository is unavailable; recovered verbatim from a preserved fork authored by the original committer. No upstream license file was found, so public redistribution requires review.",
+      "skills": [
+        "devops-incident-responder",
+        "sre-engineer"
+      ]
+    },
+    {
+      "owner": "inference-sh",
+      "repository": "agent-skills",
+      "source": "https://github.com/inference-sh/agent-skills",
+      "archive_owner": "inference-sh",
+      "archive_repository": "skills",
+      "revision": "becc25649700d5457772a00e5143e28ccf9e5afa",
+      "path_template": "tools/llm/{skill}",
+      "upstream_skill_path_template": "tools/llm/{skill}/SKILL.md",
+      "kind": "successor",
+      "skill_file_only": true,
+      "reason": "The original repository moved to the same owner's current skills repository; the catalog page also links its installation resources to this successor.",
+      "skills": [
+        "llm-models"
+      ]
+    },
+    {
+      "owner": "rickydwilson-dcs",
+      "repository": "claude-skills",
+      "source": "https://github.com/rickydwilson-dcs/claude-skills",
+      "archive_owner": "majiayu000",
+      "archive_repository": "claude-skill-registry",
+      "revision": "74d361041705b91a8a1ce9602811b45cf455954e",
+      "path_template": "skills/development/senior-pm-rickydwilson-dcs-claude-skills",
+      "upstream_skill_path_template": "skills/delivery-team/{skill}/SKILL.md",
+      "kind": "mirror",
+      "skill_file_only": true,
+      "reason": "The original repository is unavailable; recovered from a source-qualified registry snapshot. Registry metadata marks redistribution terms as unknown, so public redistribution requires review.",
+      "skills": [
+        "senior-pm"
+      ]
+    },
+    {
+      "owner": "supercent-io",
+      "repository": "skills-template",
+      "source": "https://github.com/supercent-io/skills-template",
+      "archive_owner": "aiskillstore",
+      "archive_repository": "marketplace",
+      "revision": "8666ffc6d66ec5cac27c573b9ae7ff78a3cd7330",
+      "path_template": "skills/supercent-io/{skill}",
+      "kind": "mirror",
+      "skill_file_only": true,
+      "reason": "The original repository is unavailable; recovered from source-qualified marketplace snapshots. No upstream license file was found, so public redistribution requires review.",
+      "skills": [
+        "database-schema-design",
+        "performance-optimization",
+        "task-estimation",
+        "technical-writing"
+      ]
+    }
+  ]
+}
