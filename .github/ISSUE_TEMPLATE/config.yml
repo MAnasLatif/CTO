@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/MAnasLatif/CTO/security/advisories/new
+    about: Report vulnerabilities privately. Do not disclose them in a public issue.
+  - name: Upstream specialist issue
+    url: https://github.com/MAnasLatif/CTO/blob/main/THIRD_PARTY_SOURCES.md
+    about: Check whether the issue belongs to a specialist's upstream repository.

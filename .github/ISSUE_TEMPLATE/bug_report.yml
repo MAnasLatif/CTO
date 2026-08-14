@@ -1,0 +1,52 @@
+name: Bug report
+description: Report reproducible behavior in the CTO wrapper or repository tooling.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include secrets, credentials, or unpatched vulnerability details.
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation mode
+      options:
+        - Wrapper only
+        - Full specialist pack
+        - Repository development checkout
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Observed behavior
+      description: Include the exact command or request and the result.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include operating system, Python, Node.js, Skills CLI, and target agent versions.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues for this behavior.
+          required: true
+        - label: I removed secrets and private data from this report.
+          required: true
