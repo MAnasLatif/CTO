@@ -14,6 +14,11 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SKILL_ROOT = REPOSITORY_ROOT / "skills" / "cto"
+sys.path.insert(0, str(SKILL_ROOT / "scripts"))
+
+from catalog import load_manifest, load_recovery
+
+
 EXPECTED_SKILLS = 193
 REQUIRED_FILES = (
     ".editorconfig",
@@ -26,11 +31,14 @@ REQUIRED_FILES = (
     "README.md",
     "SECURITY.md",
     "THIRD_PARTY_SOURCES.md",
+    "tests/test_regressions.py",
     "skills/cto/SKILL.md",
+    "skills/cto/LICENSE",
     "skills/cto/references/capability-map.md",
     "skills/cto/references/recovery.json",
     "skills/cto/references/subskills.json",
     "skills/cto/scripts/generate_notices.py",
+    "skills/cto/scripts/catalog.py",
     "skills/cto/scripts/select_subskills.py",
     "skills/cto/scripts/sync_subskills.py",
     "skills/cto/scripts/validate_bundle.py",
@@ -76,6 +84,8 @@ def validate_frontmatter() -> None:
             raise ValueError(f"Missing frontmatter value: {field}: {value}")
     if "https://github.com/MAnasLatif/CTO" not in frontmatter:
         raise ValueError("Canonical repository URL is missing from skill frontmatter")
+    if (REPOSITORY_ROOT / "LICENSE").read_bytes() != (SKILL_ROOT / "LICENSE").read_bytes():
+        raise ValueError("Root and packaged skill licenses differ")
 
 
 def validate_python_syntax() -> None:
@@ -85,34 +95,13 @@ def validate_python_syntax() -> None:
         ast.parse(script.read_text(encoding="utf-8"), filename=str(script))
 
 
-def validate_manifest() -> None:
+def validate_manifest() -> dict:
     canonical_manifest = SKILL_ROOT / "references" / "subskills.json"
-    manifest = json.loads(canonical_manifest.read_text(encoding="utf-8"))
-    entries = manifest.get("skills", [])
-    summary = manifest.get("summary", {})
-
-    if manifest.get("schema_version") != 1:
-        raise ValueError("Unsupported sub-skill manifest schema")
-    if len(entries) != EXPECTED_SKILLS:
+    manifest = load_manifest(canonical_manifest)
+    if len(manifest["skills"]) != EXPECTED_SKILLS:
         raise ValueError(f"Expected {EXPECTED_SKILLS} catalog entries")
-    if summary.get("unique_source_skill_pairs") != EXPECTED_SKILLS:
-        raise ValueError("Manifest summary has an unexpected specialist count")
-
-    ids = [entry.get("id") for entry in entries]
-    if len(ids) != len(set(ids)):
-        raise ValueError("Manifest contains duplicate source-qualified IDs")
-    if ids != sorted(ids, key=str.lower):
-        raise ValueError("Manifest entries are not deterministically ordered")
-
-    for entry in entries:
-        expected_id = (
-            f"{entry.get('owner')}/{entry.get('repository')}#{entry.get('skill')}"
-        )
-        expected_source = (
-            f"https://github.com/{entry.get('owner')}/{entry.get('repository')}"
-        )
-        if entry.get("id") != expected_id or entry.get("source") != expected_source:
-            raise ValueError(f"Invalid catalog identity: {entry.get('id')}")
+    load_recovery(SKILL_ROOT / "references" / "recovery.json", manifest)
+    return manifest
 
 
 def validate_manifest_and_wrapper() -> None:
@@ -177,12 +166,17 @@ def validate_git_boundary() -> None:
         raise ValueError("Third-party or local files are tracked: " + ", ".join(forbidden))
 
 
+def run_regression_tests() -> None:
+    run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"])
+
+
 def main() -> None:
     validate_required_files()
     validate_frontmatter()
     validate_python_syntax()
     validate_manifest_and_wrapper()
     validate_git_boundary()
+    run_regression_tests()
     print("Repository verification passed: 193 catalog entries, public wrapper only.")
 
 

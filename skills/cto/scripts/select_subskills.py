@@ -8,6 +8,8 @@ import json
 import re
 from pathlib import Path
 
+from catalog import load_manifest
+
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = SKILL_ROOT / "references" / "subskills.json"
@@ -155,7 +157,7 @@ def main() -> None:
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args()
 
-    manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
+    manifest = load_manifest(args.manifest)
     results = rank(args.query, manifest, args.include_missing)[: max(args.limit, 1)]
     if args.as_json:
         print(json.dumps(results, indent=2, ensure_ascii=True))

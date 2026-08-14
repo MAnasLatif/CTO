@@ -19,6 +19,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
+from catalog import load_manifest, load_recovery, validate_recovery
+
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = SKILL_ROOT / "references" / "subskills.json"
@@ -70,6 +72,29 @@ def tree_digest(
         file_count += 1
         byte_count += len(data)
     return digest.hexdigest(), file_count, byte_count
+
+
+def file_tree_digest(relative_path: str, data: bytes) -> tuple[str, int, int]:
+    digest = hashlib.sha256()
+    relative = relative_path.encode("utf-8")
+    digest.update(len(relative).to_bytes(8, "big"))
+    digest.update(relative)
+    digest.update(len(data).to_bytes(8, "big"))
+    digest.update(data)
+    return digest.hexdigest(), 1, len(data)
+
+
+def mark_stale(record: dict, upstream: tuple[str, int, int]) -> None:
+    upstream_digest, upstream_files, upstream_size = upstream
+    record.update(
+        {
+            "status": "stale",
+            "upstream_sha256": upstream_digest,
+            "upstream_files": upstream_files,
+            "upstream_bytes": upstream_size,
+            "error": "Local content differs from upstream; rerun with --force.",
+        }
+    )
 
 
 def attach_install_digest(record: dict, directory: Path) -> None:
@@ -357,26 +382,6 @@ def recover_direct_files(
     for entry in applicable:
         rule = recoveries[entry["id"]]
         destination = SKILL_ROOT / "subskills" / source_key(entry) / entry["skill"]
-        if destination.exists():
-            if not force:
-                digest, files, size = tree_digest(destination)
-                record = {
-                    "id": entry["id"],
-                    "status": "existing",
-                    "path": str(destination.relative_to(SKILL_ROOT)),
-                    "sha256": digest,
-                    "files": files,
-                    "bytes": size,
-                }
-                record.update(recovery_metadata(source, rule))
-                if rule.get("legacy_markdown"):
-                    record["content_adaptations"] = [
-                        "Prepended required Agent Skills frontmatter to legacy Markdown source."
-                    ]
-                records[entry["id"]] = record
-                continue
-            shutil.rmtree(destination)
-
         archived_path = (
             rule["path"]
             if rule.get("legacy_markdown")
@@ -401,6 +406,29 @@ def recover_direct_files(
                 "---\n\n"
             ).encode("utf-8")
             data = frontmatter + data
+
+        if destination.exists():
+            if not force:
+                digest, files, size = tree_digest(destination)
+                record = {
+                    "id": entry["id"],
+                    "status": "existing",
+                    "path": str(destination.relative_to(SKILL_ROOT)),
+                    "sha256": digest,
+                    "files": files,
+                    "bytes": size,
+                }
+                upstream = file_tree_digest("SKILL.md", data)
+                if digest != upstream[0]:
+                    mark_stale(record, upstream)
+                record.update(recovery_metadata(source, rule))
+                if rule.get("legacy_markdown"):
+                    record["content_adaptations"] = [
+                        "Prepended required Agent Skills frontmatter to legacy Markdown source."
+                    ]
+                records[entry["id"]] = record
+                continue
+            shutil.rmtree(destination)
 
         destination.mkdir(parents=True, exist_ok=True)
         (destination / "SKILL.md").write_bytes(data)
@@ -468,20 +496,11 @@ def recover_from_archive(
                         matching.append(member)
 
                 destination = SKILL_ROOT / "subskills" / source_key(entry) / entry["skill"]
+                existing_destination = destination.exists()
                 if destination.exists():
-                    if not force:
-                        digest, files, size = tree_digest(destination)
-                        records[entry["id"]] = {
-                            "id": entry["id"],
-                            "status": "existing",
-                            "path": str(destination.relative_to(SKILL_ROOT)),
-                            "sha256": digest,
-                            "files": files,
-                            "bytes": size,
-                        }
-                        records[entry["id"]].update(recovery_metadata(source, rule))
-                        continue
-                    shutil.rmtree(destination)
+                    if force:
+                        shutil.rmtree(destination)
+                        existing_destination = False
 
                 regular_files = [member for member in matching if member.isfile()]
                 if rule.get("legacy_markdown"):
@@ -497,6 +516,12 @@ def recover_from_archive(
                         "error": f"No recoverable skill at {rule['path']} in {revision}",
                     }
                     continue
+
+                output_root = (
+                    Path(temporary) / "expected" / source_key(entry) / entry["skill"]
+                    if existing_destination
+                    else destination
+                )
 
                 if rule.get("legacy_markdown"):
                     member = regular_files[0]
@@ -514,7 +539,7 @@ def recover_from_archive(
                         f"description: {json.dumps(description, ensure_ascii=True)}\n"
                         "---\n\n"
                     ).encode("utf-8")
-                    output = destination / "SKILL.md"
+                    output = output_root / "SKILL.md"
                     output.parent.mkdir(parents=True, exist_ok=True)
                     output.write_bytes(frontmatter + data)
                     output.chmod(member.mode & 0o777)
@@ -532,23 +557,29 @@ def recover_from_archive(
                         total_recovered += len(data)
                         if len(data) > MAX_RECOVERED_BYTES or total_recovered > MAX_RECOVERED_BYTES:
                             raise ValueError("Recovered content exceeds safety limit")
-                        output = destination.joinpath(*relative_parts)
+                        output = output_root.joinpath(*relative_parts)
                         output.parent.mkdir(parents=True, exist_ok=True)
                         output.write_bytes(data)
                         output.chmod(member.mode & 0o777)
 
-                digest, files, size = tree_digest(destination)
-                records[entry["id"]] = {
+                upstream = tree_digest(output_root)
+                digest, files, size = (
+                    tree_digest(destination) if existing_destination else upstream
+                )
+                record = {
                     "id": entry["id"],
-                    "status": "recovered",
+                    "status": "existing" if existing_destination else "recovered",
                     "path": str(destination.relative_to(SKILL_ROOT)),
                     "sha256": digest,
                     "files": files,
                     "bytes": size,
                 }
-                records[entry["id"]].update(recovery_metadata(source, rule))
+                if existing_destination and digest != upstream[0]:
+                    mark_stale(record, upstream)
+                records[entry["id"]] = record
+                record.update(recovery_metadata(source, rule))
                 if rule.get("legacy_markdown"):
-                    records[entry["id"]]["content_adaptations"] = [
+                    record["content_adaptations"] = [
                         "Prepended required Agent Skills frontmatter to legacy Markdown source."
                     ]
 
@@ -581,6 +612,7 @@ def copy_installed(entry: dict, workspace: Path, force: bool) -> dict:
     if destination.exists():
         if not force:
             digest, files, size = tree_digest(destination)
+            upstream_digest, upstream_files, upstream_size = tree_digest(installed)
             record = {
                 "id": entry["id"],
                 "status": "existing",
@@ -589,6 +621,9 @@ def copy_installed(entry: dict, workspace: Path, force: bool) -> dict:
                 "files": files,
                 "bytes": size,
             }
+            if digest != upstream_digest:
+                mark_stale(record, (upstream_digest, upstream_files, upstream_size))
+                return record
             record.update(lock_metadata(workspace, entry["skill"]))
             return record
         shutil.rmtree(destination)
@@ -613,7 +648,7 @@ def sync_source(
     force: bool,
     recoveries: dict[str, dict],
 ) -> list[dict]:
-    head = remote_head(source)
+    head_before = remote_head(source)
     with tempfile.TemporaryDirectory(prefix="cto-subskills-") as temporary:
         workspace = Path(temporary)
         result = run_install(source, [entry["skill"] for entry in entries], workspace)
@@ -644,10 +679,11 @@ def sync_source(
         recovered = recover_from_archive(source, unresolved, recoveries, force)
         records = [recovered.get(record["id"], record) for record in records]
 
-        legal_files = fetch_source_legal_files(entries[0], head)
+        head_after = remote_head(source)
+        legal_files = fetch_source_legal_files(entries[0], head_after or head_before)
         for record in records:
             record["source"] = source
-            record["source_current_head"] = head
+            record["source_current_head"] = head_after
             if record.get("path"):
                 attach_install_digest(record, SKILL_ROOT / record["path"])
             if record["id"] in recovered:
@@ -657,8 +693,15 @@ def sync_source(
                     )
                 else:
                     record.setdefault("source_legal_files", [])
-            else:
-                record["source_head"] = head
+            elif record["status"] in {"downloaded", "existing"}:
+                if head_before is None or head_after is None:
+                    record["status"] = "unverified"
+                    record["error"] = "Could not pin downloaded content to a source revision."
+                elif head_before != head_after:
+                    record["status"] = "unverified"
+                    record["error"] = "Source HEAD changed during synchronization; rerun sync."
+                else:
+                    record["source_head"] = head_before
                 record["source_legal_files"] = legal_files
         return records
 
@@ -690,11 +733,13 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
-    manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
+    manifest = load_manifest(args.manifest)
     recovery = (
-        json.loads(args.recovery.read_text(encoding="utf-8"))
+        load_recovery(args.recovery, manifest)
         if args.recovery.exists()
-        else {"recoveries": []}
+        else validate_recovery(
+            {"schema_version": 1, "recoveries": []}, manifest
+        )
     )
     recoveries = recovery_index(recovery)
     entries = select_entries(manifest, args.only)
@@ -752,7 +797,9 @@ def main() -> None:
     args.report.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report["status_counts"], sort_keys=True))
 
-    failures = sum(counts[key] for key in ("failed", "missing"))
+    failures = sum(
+        counts[key] for key in ("failed", "missing", "stale", "unverified")
+    )
     if failures:
         raise SystemExit(1)
 

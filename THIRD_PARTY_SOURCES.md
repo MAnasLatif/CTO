@@ -11,9 +11,10 @@ License does not grant rights to any synchronized third-party content, names, or
 trademarks.
 
 Synchronization records source revisions, recovery provenance, hashes, legal
-files, and static command indicators in local generated reports. These reports
-support review but do not replace upstream license terms or a security audit.
-Review a specialist and its upstream terms before execution or redistribution.
+files, and static command indicators in local generated reports and
+`THIRD_PARTY_NOTICES.md`. These artifacts support review but do not replace
+upstream license terms or a security audit. Review a specialist and its upstream
+terms before execution or redistribution.
 
 No third-party script is executed by the synchronization process. Some
 specialists contain executable examples or utilities; the CTO wrapper requires

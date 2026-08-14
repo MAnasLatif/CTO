@@ -21,13 +21,17 @@ Requirements: Python 3.10+, Node.js with `npx`, Git, and network access.
 git clone https://github.com/MAnasLatif/CTO.git
 cd CTO
 python3 scripts/install.py \
+   --target /path/to/your/workspace \
   --agent github-copilot \
   --acknowledge-third-party-sources
 ```
 
 The installer downloads specialists directly from their upstream repositories,
-validates the resulting bundle, and copies the complete skill to the selected
-agent. Repeat `--agent` to install for more than one supported agent.
+validates provenance and bundle integrity, generates local third-party notices,
+and copies the complete skill to the selected agent. Repeat `--agent` to install
+for more than one supported agent. `--target` is the workspace where the agent
+should discover the installed skill; it defaults to the directory from which the
+installer was invoked.
 
 ### Wrapper Only
 
@@ -40,6 +44,16 @@ npx skills add https://github.com/MAnasLatif/CTO --skill cto
 
 The wrapper can still answer CTO requests, but specialist instruction files are
 unavailable until synchronization.
+
+When operating from a repository checkout, the equivalent explicit wrapper-only
+install is:
+
+```bash
+python3 scripts/install.py \
+   --target /path/to/your/workspace \
+   --wrapper-only \
+   --agent github-copilot
+```
 
 ## How It Works
 
@@ -61,9 +75,11 @@ another. Third-party scripts are never executed during synchronization.
 .
 ├── skills/cto/             # Publishable Agent Skill
 │   ├── SKILL.md            # CTO orchestration instructions
+│   ├── LICENSE             # License shipped with installed wrapper
 │   ├── references/         # Catalog, capability map, recovery pins
 │   └── scripts/            # Selection, sync, audit, notices
 ├── scripts/                # Repository install and verification tools
+├── tests/                  # Security and provenance regressions
 └── THIRD_PARTY_SOURCES.md  # Dependency and licensing boundary
 ```
 

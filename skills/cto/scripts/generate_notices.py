@@ -7,6 +7,8 @@ import argparse
 import json
 from pathlib import Path
 
+from catalog import load_manifest
+
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 LICENSE_PREFIXES = ("license", "licence", "copying")
@@ -51,7 +53,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=SKILL_ROOT / "THIRD_PARTY_NOTICES.md")
     args = parser.parse_args()
 
-    manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
+    manifest = load_manifest(args.manifest)
     sync_report = json.loads(args.sync_report.read_text(encoding="utf-8"))
     audit_report = json.loads(args.audit_report.read_text(encoding="utf-8"))
     records = {record["id"]: record for record in sync_report["skills"]}
@@ -86,8 +88,8 @@ def main() -> None:
         "Bundled sub-skills remain subject to their upstream licenses. Source",
         "revisions, recovery archives, copied legal files, and content adaptations",
         "and installer normalizations are recorded below. A recovery archive's",
-        "license does not replace the",
-        "original source's license. Content marked `UNKNOWN` must not be publicly",
+        "license does not replace the original source's license. Content marked",
+        "`UNKNOWN` must not be publicly",
         "redistributed until permission is confirmed. A declaration-only source",
         "requires verification and inclusion of its complete license terms.",
         "",

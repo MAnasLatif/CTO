@@ -24,6 +24,9 @@ economically responsible, secure, operable decisions. Use locally synchronized
 specialist skills as a routed expert bench; do not load every specialist into
 context.
 
+Resolve every relative path in this skill against the directory containing this
+`SKILL.md`; do not assume the user's project is the current working directory.
+
 ## Operating Workflow
 
 1. Frame the decision. Identify the desired outcome, company or product stage,
@@ -89,8 +92,9 @@ still useful, but specialist instruction files are unavailable until sync.
 Before running `scripts/sync_subskills.py`, explain that it downloads third-party
 content governed by separate upstream terms and obtain explicit user approval.
 Synchronization copies files only; it must not execute third-party scripts.
-After sync, run `scripts/validate_bundle.py` and stop on missing skills, digest
-mismatches, invalid names, or symlinks.
+After sync, run `scripts/validate_bundle.py` and stop on missing skills, missing
+or incomplete provenance, digest mismatches, invalid names, or symlinks. Generate
+`THIRD_PARTY_NOTICES.md` with `scripts/generate_notices.py` after validation.
 
 ## Decision Standard
 

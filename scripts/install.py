@@ -19,9 +19,9 @@ DEFAULT_SKILLS_CLI_PACKAGE = os.environ.get(
 )
 
 
-def run(command: list[str]) -> None:
+def run(command: list[str], *, cwd: Path = REPOSITORY_ROOT) -> None:
     print("+ " + " ".join(command), flush=True)
-    subprocess.run(command, cwd=REPOSITORY_ROOT, check=True)
+    subprocess.run(command, cwd=cwd, check=True)
 
 
 def require_commands(commands: tuple[str, ...]) -> None:
@@ -62,6 +62,12 @@ def main() -> None:
         default=DEFAULT_SKILLS_CLI_PACKAGE,
         help="Pinned npm package used to run the Skills CLI.",
     )
+    parser.add_argument(
+        "--target",
+        type=Path,
+        default=Path.cwd(),
+        help="Workspace where the CTO skill will be installed (default: current directory).",
+    )
     args = parser.parse_args()
 
     if args.wrapper_only and args.sync_only:
@@ -72,6 +78,9 @@ def main() -> None:
         parser.error(
             "full synchronization requires --acknowledge-third-party-sources"
         )
+    target = args.target.expanduser().resolve()
+    if not target.is_dir():
+        parser.error(f"target workspace is not a directory: {target}")
 
     require_commands(("npx",))
     if not args.wrapper_only:
@@ -94,6 +103,7 @@ def main() -> None:
             check=True,
         )
         run([sys.executable, str(SKILL_ROOT / "scripts" / "validate_bundle.py")])
+        run([sys.executable, str(SKILL_ROOT / "scripts" / "generate_notices.py")])
 
         audit_path = SKILL_ROOT / "references" / "audit-report.json"
         audit = json.loads(audit_path.read_text(encoding="utf-8"))
@@ -101,8 +111,8 @@ def main() -> None:
         print(
             "Validated "
             f"{summary['installed_skills']} specialists; "
-            f"{summary['sources_with_unknown_license']} source licenses remain unknown "
-            "for redistribution.",
+            f"{summary['sources_with_unknown_license']} source licenses remain unknown and "
+            f"{summary['sources_with_declarations_only']} are declaration-only for redistribution.",
             flush=True,
         )
 
@@ -123,7 +133,7 @@ def main() -> None:
     ]
     for agent in args.agent:
         install_command.extend(["--agent", agent])
-    run(install_command)
+    run(install_command, cwd=target)
 
 
 if __name__ == "__main__":

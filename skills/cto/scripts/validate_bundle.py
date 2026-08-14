@@ -11,6 +11,8 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from catalog import load_manifest
+
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = SKILL_ROOT / "references" / "subskills.json"
@@ -26,6 +28,8 @@ TEXT_SUFFIXES = {"", ".md", ".txt", ".py", ".js", ".ts", ".sh", ".json", ".yaml"
 SCRIPT_SUFFIXES = {".py", ".js", ".mjs", ".cjs", ".ts", ".sh", ".bash", ".zsh", ".ps1"}
 LICENSE_PREFIXES = ("license", "licence", "copying")
 INSTALLER_EXCLUDED_FILES = frozenset({"metadata.json"})
+REVISION_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+DIGEST_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 MANUAL_REVIEWS = [
     {
         "id": "axiom-sre-trusted-config-execution",
@@ -56,7 +60,9 @@ def tree_digest(
     directory: Path, excluded_files: set[str] | frozenset[str] = frozenset()
 ) -> str:
     digest = hashlib.sha256()
-    for path in sorted(item for item in directory.rglob("*") if item.is_file()):
+    for path in sorted(
+        item for item in directory.rglob("*") if item.is_file() and not item.is_symlink()
+    ):
         relative_path = path.relative_to(directory).as_posix()
         if relative_path in excluded_files:
             continue
@@ -135,19 +141,49 @@ def main() -> None:
     parser.add_argument("--allow-missing", action="store_true")
     args = parser.parse_args()
 
-    manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
+    manifest = load_manifest(args.manifest)
     sync_report = (
         json.loads(args.sync_report.read_text(encoding="utf-8"))
         if args.sync_report.exists()
         else {"skills": []}
     )
-    synced = {record["id"]: record for record in sync_report.get("skills", [])}
+    raw_sync_records = sync_report.get("skills", [])
+    invalid_sync_records: list[dict] = []
+    if not isinstance(raw_sync_records, list):
+        invalid_sync_records.append(
+            {"index": None, "error": "Sync report skills must be a list."}
+        )
+        raw_sync_records = []
+    sync_records: list[dict] = []
+    for index, record in enumerate(raw_sync_records):
+        if not isinstance(record, dict) or not isinstance(record.get("id"), str):
+            invalid_sync_records.append(
+                {"index": index, "error": "Sync record requires a string id."}
+            )
+            continue
+        sync_records.append(record)
+    sync_record_ids = [record["id"] for record in sync_records]
+    duplicate_sync_records = sorted(
+        record_id
+        for record_id, count in Counter(sync_record_ids).items()
+        if record_id is not None and count > 1
+    )
+    synced = {record["id"]: record for record in sync_records}
+    manifest_ids = {entry["id"] for entry in manifest["skills"]}
+    unexpected_sync_records = sorted(set(synced) - manifest_ids)
+    incomplete_sync_records = sorted(
+        record_id
+        for record_id, record in synced.items()
+        if record.get("status") not in {"downloaded", "existing", "recovered"}
+    )
 
     missing: list[str] = []
+    missing_sync_records: list[str] = []
+    unhashed_sync_records: list[str] = []
     invalid_names: list[dict] = []
     digest_mismatches: list[dict] = []
     installer_normalizations: list[dict] = []
-    symlinks: list[str] = []
+    symlinks: set[str] = set()
     risk_counts: Counter = Counter()
     risk_findings: dict[str, set[str]] = defaultdict(set)
     script_paths: set[str] = set()
@@ -163,6 +199,15 @@ def main() -> None:
             missing.append(entry["id"])
             continue
         installed += 1
+        current = directory
+        linked_ancestor = False
+        while current != SKILL_ROOT:
+            if current.is_symlink():
+                symlinks.add(str(current.relative_to(SKILL_ROOT)))
+                linked_ancestor = True
+            current = current.parent
+        if linked_ancestor:
+            continue
         actual_name = frontmatter_name(skill_file)
         if actual_name != entry["skill"]:
             invalid_names.append(
@@ -170,29 +215,53 @@ def main() -> None:
             )
 
         record = synced.get(entry["id"])
-        if record and record.get("sha256"):
-            actual_digest = tree_digest(directory)
-            if actual_digest != record["sha256"]:
-                excluded_files = set(record.get("install_excluded_files", []))
-                normalized_digest = tree_digest(directory, excluded_files)
-                valid_normalization = (
-                    bool(excluded_files)
-                    and excluded_files.issubset(INSTALLER_EXCLUDED_FILES)
-                    and all(not (directory / path).exists() for path in excluded_files)
-                    and normalized_digest == record.get("install_sha256")
+        if record is None:
+            missing_sync_records.append(entry["id"])
+        else:
+            expected_path = str(directory.relative_to(SKILL_ROOT))
+            metadata_errors: list[str] = []
+            if record.get("source") != entry["source"]:
+                metadata_errors.append("source")
+            if record.get("path") != expected_path:
+                metadata_errors.append("path")
+            if not isinstance(record.get("source_head"), str) or not REVISION_PATTERN.fullmatch(
+                record["source_head"]
+            ):
+                metadata_errors.append("source_head")
+            if metadata_errors:
+                invalid_sync_records.append(
+                    {
+                        "id": entry["id"],
+                        "error": "Invalid sync metadata: " + ", ".join(metadata_errors),
+                    }
                 )
-                if valid_normalization:
-                    installer_normalizations.append(
-                        {"id": entry["id"], "omitted_files": sorted(excluded_files)}
+            if not isinstance(record.get("sha256"), str) or not DIGEST_PATTERN.fullmatch(
+                record["sha256"]
+            ):
+                unhashed_sync_records.append(entry["id"])
+            else:
+                actual_digest = tree_digest(directory)
+                if actual_digest != record["sha256"]:
+                    excluded_files = set(record.get("install_excluded_files", []))
+                    normalized_digest = tree_digest(directory, excluded_files)
+                    valid_normalization = (
+                        bool(excluded_files)
+                        and excluded_files.issubset(INSTALLER_EXCLUDED_FILES)
+                        and all(not (directory / path).exists() for path in excluded_files)
+                        and normalized_digest == record.get("install_sha256")
                     )
-                else:
-                    digest_mismatches.append(
-                        {
-                            "id": entry["id"],
-                            "expected": record["sha256"],
-                            "actual": actual_digest,
-                        }
-                    )
+                    if valid_normalization:
+                        installer_normalizations.append(
+                            {"id": entry["id"], "omitted_files": sorted(excluded_files)}
+                        )
+                    else:
+                        digest_mismatches.append(
+                            {
+                                "id": entry["id"],
+                                "expected": record["sha256"],
+                                "actual": actual_digest,
+                            }
+                        )
 
         risks, found_risks, scripts, executables, found_symlinks, local_license_files = scan_files(directory)
         risk_counts.update(risks)
@@ -200,7 +269,7 @@ def main() -> None:
             risk_findings[label].update(paths)
         script_paths.update(scripts)
         executable_paths.update(executables)
-        symlinks.extend(found_symlinks)
+        symlinks.update(found_symlinks)
         declared_license = frontmatter_license(skill_file)
         evidence = source_license_evidence.setdefault(
             entry["source"],
@@ -267,6 +336,12 @@ def main() -> None:
             "expected_skills": expected,
             "installed_skills": installed,
             "missing_skills": len(missing),
+            "missing_sync_records": len(missing_sync_records),
+            "unhashed_sync_records": len(unhashed_sync_records),
+            "duplicate_sync_records": len(duplicate_sync_records),
+            "unexpected_sync_records": len(unexpected_sync_records),
+            "incomplete_sync_records": len(incomplete_sync_records),
+            "invalid_sync_records": len(invalid_sync_records),
             "invalid_names": len(invalid_names),
             "digest_mismatches": len(digest_mismatches),
             "installer_normalizations": len(installer_normalizations),
@@ -281,10 +356,16 @@ def main() -> None:
             "manual_review_findings": len(MANUAL_REVIEWS),
         },
         "missing": missing,
+        "missing_sync_records": missing_sync_records,
+        "unhashed_sync_records": unhashed_sync_records,
+        "duplicate_sync_records": duplicate_sync_records,
+        "unexpected_sync_records": unexpected_sync_records,
+        "incomplete_sync_records": incomplete_sync_records,
+        "invalid_sync_records": invalid_sync_records,
         "invalid_names": invalid_names,
         "digest_mismatches": digest_mismatches,
         "installer_normalizations": installer_normalizations,
-        "symlinks": symlinks,
+        "symlinks": sorted(symlinks),
         "static_risk_indicators": dict(sorted(risk_counts.items())),
         "static_risk_findings": {
             label: sorted(paths) for label, paths in sorted(risk_findings.items())
@@ -305,7 +386,17 @@ def main() -> None:
     args.output.write_text(json.dumps(audit, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(audit["summary"], indent=2))
 
-    hard_failures = invalid_names or digest_mismatches or symlinks
+    hard_failures = (
+        invalid_names
+        or digest_mismatches
+        or symlinks
+        or missing_sync_records
+        or unhashed_sync_records
+        or duplicate_sync_records
+        or unexpected_sync_records
+        or incomplete_sync_records
+        or invalid_sync_records
+    )
     if missing and not args.allow_missing:
         hard_failures = True
     if hard_failures:
